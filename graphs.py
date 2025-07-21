@@ -45,7 +45,7 @@ def generateDag(nums, graph = 1, zs = None):
         data['W1'] = generate_gauss(0, 1, nums)
         data['W2'] = generate_gauss(0, 1, nums)
         aw1 = aw2 = o1w1 = o2w2 = mo1 = mo2 = mo3 = yo3 = yo1 = ym = ma = 1
-        ym = 0.05
+        ym = 0.5
         data['A'] = generate_treatment(aw1*data['W1']+aw2*data['W2']+generate_gauss(0,1,nums))
         data['O1'] =  o1w1*data['W1']+generate_gauss(0, 1, nums)
         data['O2'] = o2w2*data['W2']+generate_gauss(0, 1, nums)
@@ -65,8 +65,8 @@ def generateDag(nums, graph = 1, zs = None):
         zay = [f'Z{i}' for i in range(len(pred)) if pred[i] == 3]
         for i in range(len(z_array)):
             data[f'Z{i}'] = z_array[i]
-        data['A'] = generate_treatment(data[za].sum(axis=1) + data[zay].sum(axis=1))
-        data['Y'] = data[zy].sum(axis = 1) + data[zay].sum(axis=1) + 4*data['A'] +generate_gauss(0,1,nums)
+        data['A'] = generate_treatment(1.5*data[za].sum(axis=1) + 1.25*data[zay].sum(axis=1)+ 0.75*generate_gauss(0,1,nums))
+        data['Y'] = 1.25*data[zy].sum(axis = 1) +0.75*data[zay].sum(axis=1) + 1*data['A'] +0.5*generate_gauss(0,1,nums)
         return data, za+ zay, zay+zy, zay+za+zy
     elif graph == 3:
         '''

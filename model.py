@@ -44,7 +44,7 @@ class Model():
                 return model
         if self.type == "nn":
             if ipw:
-                model = MLPClassifier(random_state=1).fit(np.array(X), np.array(Y))
+                model = MLPClassifier(random_state=42, hidden_layer_sizes=[100,]).fit(np.array(X), np.array(Y))
                 return model
             else:
                 if target == 'Y':
@@ -89,6 +89,14 @@ class Model():
         IPW_1 = data[Y]*data[A]/(props)
         IPW_0 = (data[Y]*(1-data[A]))/(1 - props)
 
+        if trim:
+            trim_arr = []
+            for i, val in enumerate(data.index):
+                if props[i] <= 0.05 or props[i] >= 0.95:
+                    trim_arr.append(val)
+
+            IPW_0.drop(trim_arr, inplace = True)
+            IPW_1.drop(trim_arr, inplace = True)
 
         # Compute the ACE
         ACE = (diff := IPW_1 - IPW_0).sum() / len(diff)
@@ -111,10 +119,15 @@ class Model():
             # Resample the data with replacement
             resampled_data = data.sample(n = data.shape[0], replace = True, ignore_index = True)
             # Get the ace for the resampled data
-            ACE= self.ipw(resampled_data, A, Y, Z, False)
+            ACE= self.ipw(resampled_data, A, Y, Z, True)
             # Add the ace to the estimates
             estimates.append(ACE)
             pass
         # Return the variance
-        return np.var(estimates)
+            # Get the lower quantile
+        q_low = np.quantile(estimates, 0.025)
+        # Get the upper quantile
+        q_up = np.quantile(estimates, .975)
+        # Return the quantile estimates
+        return np.var(estimates), q_low, q_up
             
