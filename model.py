@@ -72,7 +72,7 @@ class Model():
                 return model
         elif self.type == "linear":
             if penalty == None:
-                return LinearRegression(penalty=None,).fit(X, Y)
+                return LinearRegression().fit(X, Y)
             else:
                 model = Ridge().fit(X, Y)
                 self.best_features = []
@@ -82,7 +82,8 @@ class Model():
                 return model
         elif self.type == "nn_linear":
             if penalty == None:
-                model = MLPRegressor(random_state=42, hidden_layer_sizes=[100]).fit(np.array(X), np.array(Y))
+                self.model = MLPRegressor(random_state=42, hidden_layer_sizes=[100]).fit(np.array(X), np.array(Y))
+                return self.model
             else:
                 model = RandomForestRegressor(n_jobs=-1, n_estimators=100)
                 feat_selector = BorutaPy(
@@ -159,7 +160,7 @@ class Model():
     def backdoor_adjustment(self, data, A,  Y, Z):
         Z.insert(0, A)
         # Run the linear regression
-        reg = LinearRegression().fit(data[Z], data[Y])
+        reg = self.fit(data[Z], data[Y])
         self.model = reg
 
         # Create fragmented datasets

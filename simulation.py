@@ -58,7 +58,7 @@ def run_multiple_sims(type, graph, times = 1, ipw = True, nums = None, metric = 
 
 if __name__ == "__main__":
     np.random.seed(42)
-    '''
+    
     print(" --- Simple Graph --- ")
     print(" Log Classifier:")
     run_multiple_sims("log", 1, 20)
@@ -73,7 +73,7 @@ if __name__ == "__main__":
     
     print(" Neural Network:")
     run_multiple_sims("nn", 2, 5, True, 7500)
-    '''
+    
     print(" --- Outcome Graph --- ")
     print(" Linear Model:")
     run_multiple_sims("linear", 3, 10, False, None, "RMSE")
