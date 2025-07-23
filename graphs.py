@@ -65,8 +65,8 @@ def generateDag(nums, graph = 1, zs = None):
         zay = [f'Z{i}' for i in range(len(pred)) if pred[i] == 3]
         for i in range(len(z_array)):
             data[f'Z{i}'] = z_array[i]
-        data['A'] = generate_treatment(1.5*data[za].sum(axis=1) + 1.25*data[zay].sum(axis=1)+ 0.75*generate_gauss(0,1,nums))
-        data['Y'] = 1.25*data[zy].sum(axis = 1) +0.75*data[zay].sum(axis=1) + 1*data['A'] +0.5*generate_gauss(0,1,nums)
+        data['A'] = generate_treatment(1.25*data[za].sum(axis=1) + 1.25*data[zay].sum(axis=1)+ 0.25*generate_gauss(0,1,nums))
+        data['Y'] = 1.25*data[zy].sum(axis = 1) +0.75*data[zay].sum(axis=1) + 1*data['A'] +0.25*generate_gauss(0,1,nums)
         return data, za+ zay, zay+zy, zay+za+zy
     elif graph == 3:
         '''
@@ -85,4 +85,4 @@ def generateDag(nums, graph = 1, zs = None):
         data['C1'] = c1u1*data['U1'] + c1u2*data['U2'] + generate_gauss(0,1,nums)
         data['C2'] = c2u2*data['U2'] + c2u3*data['U3'] + generate_gauss(0,1,nums)
         data['Y'] = ya*data['A'] + yu3*data['U3'] + generate_gauss(0,1,nums)
-        return data, ['C1','C2'], ['C2'], ['C1','C2']
+        return data, ['C1','C2'], [], ['C1','C2']
