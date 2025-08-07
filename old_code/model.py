@@ -16,10 +16,21 @@ import numpy as np
 from tqdm import tqdm
 from boruta import BorutaPy
 from sklearn.neural_network import MLPClassifier
+from sklearn.model_selection import cross_val_predict
+from sklearn.model_selection import train_test_split
+
 
 class Model():
-    def __init__(self, type):
-        self.type = type
+    def __init__(self, data, A, Y, Z, model_type, covs = None):
+        self.type = model_type
+        self.data = data
+        self.A = A
+        self.Y = Y
+        self.Z = Z
+        self.covs = covs
+
+        df1, df2 = train_test_split(data, train_size=.33)
+        df2, df3 = train_test_split(df2, train_size=.5)
     
     def fit(self, X, Y, penalty = None, ipw = False, target = None):
         if self.type == "rf":
@@ -43,7 +54,7 @@ class Model():
         if self.type == "nn":
             if ipw:
                 if np.array(Y).size > 1000:
-                    model = MLPClassifier(random_state=42, hidden_layer_sizes=[10],).fit(np.array(X), np.array(Y))
+                    model = MLPClassifier(random_state=42, hidden_layer_sizes=[100],alpha=0).fit(np.array(X), np.array(Y))
                 else:
                     model = MLPClassifier(random_state=42, hidden_layer_sizes=[100]).fit(np.array(X), np.array(Y))
                 return model
@@ -124,12 +135,59 @@ class Model():
 
         return ACE
     
+    def aipw(self, data, A, Y, Z):
+        self.model = self.fit(data[Z], data[A], penalty = None, ipw = True)
+        if self.type == "rf" or self.type == "nn":
+            propensity = self.model.predict_proba(np.array(data[Z]))
+        else:
+            propensity = self.model.predict_proba(data[Z])
+        covs = data[Z + [A]]
+        if self.type == 'log':
+            y_model = LinearRegression().fit(covs, data[Y])
+        else:
+            y_model = MLPRegressor(random_state=42, hidden_layer_sizes=[100]).fit(np.array(covs), np.array(data[Y]))
+        
+        y_errs = data[Y] - y_model.predict(np.array(covs) if self.type == 'nn' else covs)
+
+        props = propensity[:,1]
+
+        covs_0, covs_1 = covs.copy(), covs.copy()
+        covs_0[A] = 0
+        covs_1[A] = 1
+        
+        IPW_1 = y_errs*data[A]/(props) + y_model.predict(np.array(covs_1) if self.type == 'nn' else covs_1)
+        IPW_0 = (y_errs*(1-data[A]))/(1 - props) + y_model.predict(np.array(covs_0) if self.type == 'nn' else covs_0)
+
+        # Compute the ACE
+        ACE = (diff := IPW_1 - IPW_0).sum() / len(diff)
+
+        return ACE
+    
+    def doubleml(self, data, A, Y, Z, type):
+        """
+        Get average treatment effect via Double ML
+        """
+        if type == 'linear':
+            debias_m = LogisticRegression(penalty=None)
+            denoise_m = LinearRegression()
+        elif type == 'nn':
+            debias_m = MLPClassifier(random_state=42, hidden_layer_sizes=[100])
+            denoise_m = MLPRegressor(random_state=42, hidden_layer_sizes=[100])
+        print(cross_val_predict(debias_m, np.array(data[Z]),np.array(data[A]), cv=10))
+        t_res = pd.DataFrame(data[A] - cross_val_predict(debias_m, np.array(data[Z]), np.array(data[A]),method='predict_proba', cv=10)[:,1])
+        
+        out_res =  pd.DataFrame(data[Y] -cross_val_predict(denoise_m, np.array(data[Z]), np.array(data[Y]), cv=10))
+
+        final_model = LinearRegression().fit(t_res, out_res)
+        return final_model.coef_[0][0]
+
+    
     def accuracy(self, data, A, Z, metric):
         if metric == 'RMSE':
             return root_mean_squared_error(data[A], self.model.predict(data[Z]))
         return self.model.score(data[Z], data[A])
     
-    def conf_int(self, data, A, Y, Z, num_bootstraps=200, trim = False, ipw = True):
+    def conf_int(self, data, A, Y, Z, num_bootstraps=200, trim = False, model = "ipw"):
         """
         Compute confidence intervals for IPW or backdoor via bootstrap.
         The input method_name can be used to decide how to compute the confidence intervals.
@@ -142,10 +200,14 @@ class Model():
             # Resample the data with replacement
             resampled_data = data.sample(n = data.shape[0], replace = True, ignore_index = True)
             # Get the ace for the resampled data
-            if ipw:
+            if model == "ipw":
                 ACE= self.ipw(resampled_data, A, Y, Z, trim)
-            else:
+            elif model == "ACE":
                 ACE =self.backdoor_adjustment(resampled_data, A, Y, Z)
+            elif model == "aipw":
+                ACE = self.aipw(resampled_data, A, Y, Z)
+            elif model == "dml":
+                ACE = self.doubleml(resampled_data, A, Y, Z, "linear")
             # Add the ace to the estimates
             estimates.append(ACE)
             pass
