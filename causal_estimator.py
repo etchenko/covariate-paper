@@ -44,8 +44,8 @@ def get_model_bundle(model_type: str) -> ModelBundle:
             treatment_estimator_model=LogisticRegression(penalty=None, solver="lbfgs"),
             outcome_selector_model=Ridge(),
             outcome_estimator_model=LinearRegression(),
-            treatment_feature_selector = CoefficientThresholdSelector(threshold=0.1),
-            outcome_feature_selector = CoefficientThresholdSelector(threshold=0.1)
+            treatment_feature_selector = CoefficientThresholdSelector(threshold=0.05),
+            outcome_feature_selector = CoefficientThresholdSelector(threshold=0.05)
         )
 
     elif model_type == "nn":
@@ -122,6 +122,7 @@ class CausalEstimator():
         
         # Data splitting
         train_data, val_data, test_data = self.split_data(data)
+        adjustment_set = []
         if not covs:
             # Feature selection
             treatment_features = self.find_best_features(

@@ -45,7 +45,7 @@ def generateDag(nums, graph = 1, zs = None):
         data['W1'] = generate_gauss(0, 1, nums)
         data['W2'] = generate_gauss(0, 1, nums)
         aw1 = aw2 = o1w1 = o2w2 = mo1 = mo2 = mo3 = yo3 = yo1 = ym = ma = 1
-        ym = 0.5
+        ym = 0.25
         data['A'] = generate_treatment(aw1*data['W1']+aw2*data['W2']+generate_gauss(0,1,nums))
         data['O1'] =  o1w1*data['W1']+generate_gauss(0, 1, nums)
         data['O2'] = o2w2*data['W2']+generate_gauss(0, 1, nums)

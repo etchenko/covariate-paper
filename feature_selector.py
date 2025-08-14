@@ -9,7 +9,7 @@ class FeatureSelector:
         raise NotImplementedError
     
 class CoefficientThresholdSelector(FeatureSelector):
-    def __init__(self, threshold=0.1):
+    def __init__(self, threshold=0.05):
         self.threshold = threshold
 
     def select_features(self, model, X, y, feature_names):
