@@ -6,7 +6,7 @@ warnings.warn = warn
 import pandas as pd
 import numpy as np
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, List
 from feature_selector import *
 
 #import sklearn stuff
@@ -91,10 +91,11 @@ def get_model_bundle(model_type: str) -> ModelBundle:
 
 
 class CausalEstimator():
-    def __init__(self, A, Y, Z):
+    def __init__(self, A, Y, Z, type = None):
         self.A = A
         self.Y = Y
         self.Z = Z
+        self.type = type
 
     def split_data(self, data, train_size=0.4, val_size=0.4, test_size=0.2, random_state=None):
         train_data, val_data = train_test_split(data, train_size=train_size, random_state=random_state)
@@ -103,8 +104,14 @@ class CausalEstimator():
     
     def find_best_features(self, data, model, selector: FeatureSelector, target):
         X = data[self.Z]
+        if self.type == "backdoor" and target != 'treatment':
+            X.append(self.A)
         y = data[self.A if target == 'treatment' else self.Y]
-        return selector.select_features(model, X, y, feature_names=self.Z)
+        features = selector.select_features(model, X, y, feature_names=self.Z)
+        if self.type == "backdoor":
+            features.remove(self.A)
+        return features
+
     
     def fit_model(self, data, model, features, target):
         """Fit a model to predict treatment or outcome"""
@@ -148,6 +155,8 @@ class CausalEstimator():
                 adjustment_set = list(set(outcome_features).intersection(set(treatment_features)))
         else:
             adjustment_set = covs
+            treatment_features = covs
+            outcome_features = covs
 
         # Fit treatment and outcome models using adjustment set
         treatment_model = self.fit_model(
@@ -171,6 +180,8 @@ class CausalEstimator():
             ace = self.estimate_aipw(test_data, treatment_model, outcome_model, adjustment_set, outcome_covs)
         elif method == 'dml':
             ace = self.estimate_dml(test_data, treatment_model, outcome_model, adjustment_set, outcome_covs)
+        elif method == 'backdoor':
+            ace = self.estimate_backdoor(test_data, treatment_model, outcome_model, adjustment_set, outcome_covs)
         else:
             raise ValueError(f"Unknown method: {method}")
         
@@ -186,8 +197,12 @@ class CausalEstimator():
             self.outcome_covs = outcome_covs
         return ace
     
-    def run_estimation_with_ci(self, data, model: ModelBundle | Literal["linear", "nn", "rf", None], criterion: Literal["treatment","outcome","union","intersection"], method: Literal["ipw","aipw","dml"], n_bootstrap = 100, ci = 0.95, n_jobs = 1):
-        point_estimate = self.run_estimation(data, model, criterion, method,save=True)
+    def run_estimation_with_ci(self, data, model: ModelBundle | Literal["linear", "nn", "rf", None], criterion: Literal["treatment","outcome","union","intersection"] | List[str], method: Literal["ipw","aipw","dml"], n_bootstrap = 100, ci = 0.95, n_jobs = 1):
+        if not isinstance(criterion, str):
+            covs = criterion
+            point_estimate = self.run_estimation(data, model, criterion, method,save=True, covs = covs)
+        else:
+            point_estimate = self.run_estimation(data, model, criterion, method,save=True)
         acc, rmse = self.calculate_accuracy()
         covs = self.adjustment_set
         treatment_set = self.treatment_features
@@ -251,3 +266,22 @@ class CausalEstimator():
 
         final_model = LinearRegression().fit(t_res, out_res)
         return final_model.coef_[0][0]
+    
+    def estimate_backdoor(self, data, treatment_model, outcome_model, adjustment_set, outcome_covs):
+        """
+        Get the backdoor adjustment estimate
+        """
+        covs_0, covs_1 = data[outcome_covs].copy(), data[outcome_covs].copy()
+        covs_0[self.A] = 0
+        covs_1[self.A] = 1
+
+        # Apply the model to the data and compute the ACE
+        result_0 = outcome_model.predict(covs_0)
+        result_1 = outcome_model.predict(covs_1)
+
+        # Calculate the difference between the two fragmented datasets
+        difference = result_1 - result_0
+
+        # Compute the ACE
+        ACE = difference.sum() / len(difference)
+        return ACE
