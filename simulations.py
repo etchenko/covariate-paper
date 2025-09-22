@@ -26,6 +26,8 @@ sims = {
     "Backdoor None Linear Graph 3": ["linear","backdoor","none",3,3000, 10],
     "Backdoor All NN Graph 3": ["nn","backdoor","all",3,5000, 1],
     "Backdoor None NN Graph 3": ["nn","backdoor","none",3,5000, 1],
+    "Backdoor None Linear Graph 3": ["linear","backdoor","outcome",3,3000, 10],
+    "Backdoor All NN Graph 3": ["nn","backdoor","outcome",3,5000, 1],
 
 }
 
