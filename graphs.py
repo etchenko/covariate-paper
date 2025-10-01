@@ -45,7 +45,8 @@ def generateDag(nums, graph = 1, zs = None):
         data['W1'] = generate_gauss(0, 1, nums)
         data['W2'] = generate_gauss(0, 1, nums)
         aw1 = aw2 = 2.5
-        o1w1 = o2w2 = mo1 = mo2 = mo3 = yo3 = yo1 = ma = 1.25
+        o1w1 = o2w2 = mo1 = mo2 = mo3 = yo3 = yo1 = 2.5
+        ma = 1
         ym = 0.5
         data['A'] = generate_treatment(aw1*data['W1']+aw2*data['W2']+generate_gauss(0,1,nums))
         data['O1'] =  o1w1*data['W1']+generate_gauss(0, 1, nums)
@@ -83,8 +84,8 @@ def generateDag(nums, graph = 1, zs = None):
         data['U3'] = generate_gauss(0,1, nums)
         data['U4'] = generate_gauss(0,1, nums)
         data['C1'] = c1u1*data['U1'] + c1u2*data['U2'] + generate_gauss(0,1,nums)
-        data['O1'] = o1c1*data['C1'] + generate_gauss(0,1,nums)
+        data['O1'] = generate_gauss(0,1,nums)
         data['A'] = generate_treatment(au1*data['U1'] + ao1*data['O1'])
         data['C2'] = c2u2*data['U2'] + c2u3*data['U3'] + generate_gauss(0,1,nums)
         data['Y'] = ya*data['A'] + yu3*data['U3'] + generate_gauss(0,1,nums)
-        return data, ['C1','C2'], [], ['C1','C2']
+        return data, ['C1','C2', 'O1'], [], ['C1','C2','O1']

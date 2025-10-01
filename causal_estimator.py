@@ -44,27 +44,43 @@ def get_model_bundle(model_type: str) -> ModelBundle:
             treatment_estimator_model=LogisticRegression(penalty=None, solver="lbfgs"),
             outcome_selector_model=Ridge(),
             outcome_estimator_model=LinearRegression(),
-            treatment_feature_selector = CoefficientThresholdSelector(threshold=0.05),
-            outcome_feature_selector = CoefficientThresholdSelector(threshold=0.05)
+            treatment_feature_selector = CoefficientThresholdSelector(threshold=0.2),
+            outcome_feature_selector = CoefficientThresholdSelector(threshold=0.2)
         )
 
     elif model_type == "nn":
         bundle = ModelBundle(
+            treatment_selector_model=LogisticRegression(penalty="l1", solver="liblinear"),
+            treatment_estimator_model=MLPClassifier(hidden_layer_sizes=[100,]),
+            outcome_selector_model=Ridge(),
+            outcome_estimator_model=MLPRegressor(hidden_layer_sizes=[100,]),
+            treatment_feature_selector = CoefficientThresholdSelector(threshold=0.2),
+            outcome_feature_selector = CoefficientThresholdSelector(threshold=0.2)
+        )
+        '''bundle = ModelBundle(
             treatment_selector_model=BorutaPy(
                     verbose=0,
-                    estimator=RandomForestClassifier(n_estimators=100),
-                    n_estimators='auto'
+                    estimator=RandomForestClassifier(max_depth=5),
+                    n_estimators='auto',
+                    two_step=True,
+                    alpha=0.01,
+                    random_state=42
                 ),
             treatment_estimator_model=MLPClassifier(hidden_layer_sizes=[100,]),
             outcome_selector_model=BorutaPy(
                     verbose=0,
-                    estimator=RandomForestRegressor(n_estimators=100),
-                    n_estimators='auto'
+                    estimator=RandomForestRegressor(max_depth=5),
+                    n_estimators='auto',
+                    two_step=True,
+                    alpha=0.01,
+                    random_state=42,
+                    perc=100
+
                 ),
             outcome_estimator_model=MLPRegressor(hidden_layer_sizes=[100,]),
             treatment_feature_selector = SupportMaskSelector(),
             outcome_feature_selector = SupportMaskSelector()
-        )
+        )'''
 
     elif model_type == "rf":
         bundle = ModelBundle(
@@ -103,12 +119,14 @@ class CausalEstimator():
         return train_data, val_data, test_data
     
     def find_best_features(self, data, model, selector: FeatureSelector, target):
-        X = data[self.Z]
-        if self.type == "backdoor" and target != 'treatment':
-            X.append(self.A)
+        if target != 'treatment':
+            X = data[self.Z + [self.A]]
+        else:
+            X = data[self.Z]
+        
         y = data[self.A if target == 'treatment' else self.Y]
         features = selector.select_features(model, X, y, feature_names=self.Z)
-        if self.type == "backdoor":
+        if target != "treatment" and (self.A in features):
             features.remove(self.A)
         return features
 
@@ -120,7 +138,8 @@ class CausalEstimator():
         model.fit(X, y)
         return model
     
-    def run_estimation(self,data, model: ModelBundle | Literal["linear", "nn", "rf"] = "linear", criterion: Literal["treatment","outcome","union","intersection"] = "treatment", method: Literal["ipw","aipw","dml"] = "aipw", covs: list | None = None, save: bool = True):
+    def run_estimation(self,data, model: ModelBundle | Literal["linear", "nn", "rf"] = "linear", criterion: Literal["treatment","outcome","union","intersection","different"] = "treatment", method: Literal["ipw","aipw","dml", "backdoor"] = "aipw", covs: list | None = None, save: bool = True, outcome_set: list | None = None, treatment_set: list | None = None):
+        self.method = method
         # Get the model bundle of not defined
         if type(model) != ModelBundle:
             models = get_model_bundle(model)
@@ -130,7 +149,7 @@ class CausalEstimator():
         # Data splitting
         train_data, val_data, test_data = self.split_data(data)
         adjustment_set = []
-        if not covs:
+        if covs == None:
             # Feature selection
             treatment_features = self.find_best_features(
                 data=train_data,
@@ -146,26 +165,41 @@ class CausalEstimator():
             )
             # Find adjustment set based on criterion
             if criterion == "treatment":
+                treatment_covs = treatment_features
                 adjustment_set = treatment_features
+                outcome_covs = adjustment_set
             elif criterion == "outcome":
+                treatment_covs = outcome_features
                 adjustment_set = outcome_features
+                outcome_covs = adjustment_set
             elif criterion == "union":
                 adjustment_set = list(set(outcome_features + treatment_features))
+                treatment_covs = adjustment_set
+                outcome_covs = adjustment_set
             elif criterion == "intersection":
                 adjustment_set = list(set(outcome_features).intersection(set(treatment_features)))
+                treatment_covs = adjustment_set
+                outcome_covs = adjustment_set
+            elif criterion == "different":
+                treatment_covs = treatment_features
+                outcome_covs = outcome_features
+                adjustment_set = treatment_features + outcome_features
         else:
             adjustment_set = covs
-            treatment_features = covs
-            outcome_features = covs
+            treatment_features = covs if not treatment_set else treatment_set
+            treatment_covs = covs if not treatment_set else treatment_set
+            outcome_features = covs if not outcome_set else outcome_set
+            outcome_covs = covs if not outcome_set else outcome_set
 
         # Fit treatment and outcome models using adjustment set
-        treatment_model = self.fit_model(
-            data=val_data,
-            model=models.treatment_estimator_model,
-            features=adjustment_set,
-            target=self.A
-        )
-        outcome_covs = adjustment_set if method == 'dml' else adjustment_set + [self.A]
+        if method != "backdoor":
+            treatment_model = self.fit_model(
+                data=val_data,
+                model=models.treatment_estimator_model,
+                features= treatment_covs,
+                target=self.A
+            )
+        outcome_covs = outcome_covs if method == 'dml' else outcome_covs + [self.A]
         outcome_model = self.fit_model(
             data=val_data,
             model=models.outcome_estimator_model,
@@ -175,29 +209,33 @@ class CausalEstimator():
 
         # Estimation
         if method == 'ipw':
-            ace = self.estimate_ipw(test_data, treatment_model, adjustment_set)
+            ace = self.estimate_ipw(test_data, treatment_model, treatment_covs)
         elif method == 'aipw':
-            ace = self.estimate_aipw(test_data, treatment_model, outcome_model, adjustment_set, outcome_covs)
+            ace = self.estimate_aipw(test_data, treatment_model, outcome_model, treatment_covs, outcome_covs)
         elif method == 'dml':
-            ace = self.estimate_dml(test_data, treatment_model, outcome_model, adjustment_set, outcome_covs)
+            ace = self.estimate_dml(test_data, treatment_model, outcome_model, treatment_covs, outcome_covs)
         elif method == 'backdoor':
-            ace = self.estimate_backdoor(test_data, treatment_model, outcome_model, adjustment_set, outcome_covs)
+            ace = self.estimate_backdoor(test_data, outcome_model, treatment_covs, outcome_covs)
         else:
             raise ValueError(f"Unknown method: {method}")
         
         if save:
             self.treatment_features = treatment_features
+            self.treatment_covs = treatment_covs
             self.outcome_features = outcome_features
-            self.treatment_model = treatment_model
+            if method != "backdoor":
+                self.treatment_model = treatment_model
             self.outcome_model = outcome_model
             self.adjustment_set = adjustment_set
             self.train_data = train_data
             self.test_data = test_data
             self.val_data = val_data
             self.outcome_covs = outcome_covs
+            self.treatment_selector_model = models.treatment_selector_model
+            self.outcome_selector_model = models.outcome_selector_model
         return ace
     
-    def run_estimation_with_ci(self, data, model: ModelBundle | Literal["linear", "nn", "rf", None], criterion: Literal["treatment","outcome","union","intersection"] | List[str], method: Literal["ipw","aipw","dml"], n_bootstrap = 100, ci = 0.95, n_jobs = 1):
+    def run_estimation_with_ci(self, data, model: ModelBundle | Literal["linear", "nn", "rf", None], criterion: Literal["treatment","outcome","union","intersection","different"] | List[str], method: Literal["ipw","aipw","dml"], n_bootstrap = 100, ci = 0.95, n_jobs = 1):
         if not isinstance(criterion, str):
             covs = criterion
             point_estimate = self.run_estimation(data, model, criterion, method,save=True, covs = covs)
@@ -213,13 +251,13 @@ class CausalEstimator():
         if n_jobs == 1:
             for _ in range(n_bootstrap):
                 resampled = data.sample(n=n, replace=True)
-                est = self.run_estimation(resampled, model, criterion, method, covs, save = False)
+                est = self.run_estimation(resampled, model, criterion, method, covs, save = False, outcome_set = outcome_set, treatment_set=treatment_set)
                 estimates.append(est)
         else:
             samples = []
             for _ in range(n_bootstrap):
                 samples.append(data.sample(n=n, replace=True))
-            arg_iterable = [(sample, model, criterion, method, covs, False) for sample in samples]
+            arg_iterable = [(sample, model, criterion, method, covs, False, outcome_set) for sample in samples]
             with multiprocess.Pool(n_jobs) as pool:
                 estimates = pool.starmap(self.run_estimation, arg_iterable)
 
@@ -229,7 +267,12 @@ class CausalEstimator():
         return {"ace": point_estimate, "var": np.var(estimates), "ci":(lower, upper), "treat_acc": acc, "out_rmse": rmse, "adj":covs, "treat_set":treatment_set,"out_set":outcome_set}
     
     def calculate_accuracy(self):
-        return (self.treatment_model.score(self.test_data[self.adjustment_set], self.test_data[self.A]), root_mean_squared_error(self.test_data[self.Y], self.outcome_model.predict(self.test_data[self.outcome_covs])))
+        if self.method != "backdoor":
+            acc = self.treatment_model.score(self.test_data[self.treatment_covs], self.test_data[self.A])
+        else:
+            acc = None
+        rmse = root_mean_squared_error(self.test_data[self.Y], self.outcome_model.predict(self.test_data[self.outcome_covs]))
+        return (acc, rmse)
     
     def estimate_ipw(self, data, treatment_model, adjustment_set):
         propensity = treatment_model.predict_proba(data[adjustment_set])
@@ -267,7 +310,7 @@ class CausalEstimator():
         final_model = LinearRegression().fit(t_res, out_res)
         return final_model.coef_[0][0]
     
-    def estimate_backdoor(self, data, treatment_model, outcome_model, adjustment_set, outcome_covs):
+    def estimate_backdoor(self, data, outcome_model, adjustment_set, outcome_covs):
         """
         Get the backdoor adjustment estimate
         """
