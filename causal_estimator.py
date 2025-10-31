@@ -55,13 +55,13 @@ def get_model_bundle(model_type: str) -> ModelBundle:
                     estimator=RandomForestClassifier( n_jobs=-1),
                     random_state=42,
                 ),
-            treatment_estimator_model=MLPClassifier(hidden_layer_sizes=[100,100]),
+            treatment_estimator_model=MLPClassifier(hidden_layer_sizes=[100, 100, 100],learning_rate='adaptive',early_stopping=True,),
             outcome_selector_model=BorutaPy(
                     verbose=0,
                     estimator=RandomForestRegressor(n_jobs=-1),
                     random_state=42,
                 ),
-            outcome_estimator_model=MLPRegressor(hidden_layer_sizes=[100, 100]),
+            outcome_estimator_model=MLPRegressor(hidden_layer_sizes=[100, 100, 100],learning_rate='adaptive',early_stopping=True,),
             treatment_feature_selector = SupportMaskSelector(),
             outcome_feature_selector = SupportMaskSelector()
         )
@@ -159,18 +159,22 @@ class CausalEstimator():
         adjustment_set = []
         if criterion != 'covs':
             # Feature selection
-            treatment_features = self.find_best_features(
-                data=train_data,
-                model=models.treatment_selector_model,
-                selector=models.treatment_feature_selector,
-                target='treatment'
-            )
-            outcome_features = self.find_best_features(
-                data=train_data,
-                model=models.outcome_selector_model,
-                selector=models.outcome_feature_selector,
-                target='outcome'
-            )
+            if criterion in ["treatment", "union","intersection","different"]:
+                treatment_features = self.find_best_features(
+                    data=train_data,
+                    model=models.treatment_selector_model,
+                    selector=models.treatment_feature_selector,
+                    target='treatment'
+                )
+                self.treatment_features = treatment_features  
+            if criterion in ["outcome", "union","intersection","different"]:
+                outcome_features = self.find_best_features(
+                    data=train_data,
+                    model=models.outcome_selector_model,
+                    selector=models.outcome_feature_selector,
+                    target='outcome'
+                )
+                self.outcome_features = outcome_features
             # Find adjustment set based on criterion
             if criterion == "treatment":
                 adjustment_set = treatment_features
@@ -228,9 +232,7 @@ class CausalEstimator():
             raise ValueError(f"Unknown method: {method}")
         
         if save:
-            self.treatment_features = treatment_features
             self.treatment_covs = treatment_covs
-            self.outcome_features = outcome_features
             if method != "backdoor":
                 self.treatment_model = treatment_model
             self.outcome_model = outcome_model

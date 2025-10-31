@@ -5,7 +5,7 @@ from causallearn.utils.cit import CIT
 from causallearn.search.ConstraintBased.PC import pc
 from sklearn.linear_model import LogisticRegression, LinearRegression
 
-def check_adjustment_validity(df, Y, Z, A, w):
+def check_adjustment_validity(df, Y, Z, A, w, type):
     """
     Return 1 if the adjustment set is valid, and 0 otherwise
     """
@@ -21,15 +21,24 @@ def check_adjustment_validity(df, Y, Z, A, w):
         
     sm.add_constant(data)
     sm.OLS(df[Y], data).fit'''
-    used = Z + [A] + [Y]
-    ws = {}
+    if type == "linear":
+        used = Z + [A] + [Y]
+        ws = {}
 
-    data = df[[w] + Z + [A]]
-    data = sm.add_constant(data)
-    results = sm.OLS(df[Y], data).fit()
-    p_value = results.pvalues[1]
+        data = df[[w] + Z + [A]]
+        data = sm.add_constant(data)
+        results = sm.OLS(df[Y], data).fit()
+        p_value = results.pvalues[1]
 
-    return p_value
+        return p_value
+    else:
+        kci_obj = CIT(np.array(df), "fastkci")
+        w = df.columns.get_loc(w)
+        y = df.columns.get_loc("Y")
+        cond = Z + [A]
+        cond = [df.columns.get_loc(c) for c in cond]
+        pValue = kci_obj(w, y, cond)
+        return pValue
 
 
 

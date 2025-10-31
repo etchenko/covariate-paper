@@ -9,34 +9,34 @@ try:
 except:
     import multiprocessing as multiprocess
 import time
-
+#TODO: Test out 100,100,100 structure fpr the outcome neural network? Use 66 variables, and then ask Katie to run on williams machines
 sims = {
-    "AIPW Treatment Linear Graph 1": ["nn","aipw","treatment",1,5000,10],
-    "AIPW Outcome Linear Graph 1": ["nn","aipw","outcome",1,5000,10],
-    "AIPW Different Linear Graph 1": ["nn","aipw","different",1,5000,10],
-    "AIPW All Linear Graph 1": ["nn","aipw","all",1,5000,10],
-    "DML Treatment Linear Graph 2": ["nn","dml","treatment",2,2500,1],
-    "DML Outcome Linear Graph 2": ["nn","dml","outcome",2,2500,1],
-    "DML All Linear Graph 2": ["nn","dml","all",2,2500,1],
-    "DML Different Linear Graph 2": ["nn","dml","different",2,2500,1],
-    "Backdoor All Linear Graph 3": ["nn","backdoor","all",3, 5000, 1],
-    "Backdoor None Linear Graph 3": ["nn","backdoor","none",3, 5000, 1],
-    "Backdoor Outcome Linear Graph 3": ["nn","backdoor","outcome",3, 5000, 1]
-}
-'''
+    #"AIPW Treatment Non-linear Graph 1": ["nn","aipw","treatment",1,5000,10],
+    #"AIPW Outcome Non-linear Graph 1": ["nn","aipw","outcome",1,5000,10],
+    #"AIPW Different Non-linear Graph 1": ["nn","aipw","different",1,5000,10],
+    #"AIPW All Non-linear Graph 1": ["nn","aipw","all",1,5000,10],
+    #"DML Treatment Non-linear Graph 2": ["nn","dml","treatment",2,5000,100],
+    #"DML Outcome Non-linear Graph 2": ["nn","dml","outcome",2,5000,100],
+    #"DML All Non-linear Graph 2": ["nn","dml","all",2,5000,100],
+    #"DML Different Non-linear Graph 2": ["nn","dml","different",2,5000,100],
+    #"Backdoor All Non-linear Graph 3": ["nn","backdoor","all",3, 5000, 10],
+    #"Backdoor None Non-linear Graph 3": ["nn","backdoor","none",3, 5000, 10],
+    #"Backdoor Outcome Non-linear Graph 3": ["nn","backdoor","outcome",3, 5000, 5]
+#}
+#'''
     "AIPW Treatment Linear Graph 1": ["linear","aipw","treatment",1,1500,200],
     "AIPW Outcome Linear Graph 1": ["linear","aipw","outcome",1,1500,200],
     "AIPW Different Linear Graph 1": ["linear","aipw","different",1,1500,200],
     "AIPW All Linear Graph 1": ["linear","aipw","all",1,1500,200],
-    "DML Treatment Linear Graph 2": ["linear","dml","treatment",2,2500,200],
-    "DML Outcome Linear Graph 2": ["linear","dml","outcome",2,2500,200],
-    "DML All Linear Graph 2": ["linear","dml","all",2,2500,200],
-    "DML Different Linear Graph 2": ["linear","dml","different",2,2500,200],
+    "DML Treatment Linear Graph 2": ["linear","dml","treatment",2,1500,200],
+    "DML Outcome Linear Graph 2": ["linear","dml","outcome",2,1500,200],
+    "DML All Linear Graph 2": ["linear","dml","all",2,1500,200],
+    "DML Different Linear Graph 2": ["linear","dml","different",2,1500,200],
     "Backdoor All Linear Graph 3": ["linear","backdoor","all",3, 5000, 200],
     "Backdoor None Linear Graph 3": ["linear","backdoor","none",3, 5000, 200],
     "Backdoor Outcome Linear Graph 3": ["linear","backdoor","outcome",3, 5000, 200],
     
-}'''
+}
 
 
 models = ["linear","nn"]
@@ -100,13 +100,13 @@ def average_multiple_sims(nums, graph, model, criterion, method, n_jobs, n_runs,
         estimates = {"ace":[],"acc":[],"validity":[], "pval":[]}
     else:
         estimates = {"ace":[],"rmse":[],"validity":[], "pval":[]}
-    for _ in range(n_runs):
-        df, za, zy, z, w = generateDag(nums, graph, 100, model)
+    for _ in tqdm(range(n_runs), desc=f"{model} {criterion} {method} {graph}"):
+        df, za, zy, z, w = generateDag(nums, graph, 66, model)
         causal_estimator = CausalEstimator('A','Y', z)
         if criterion == "all":
             ace = causal_estimator.run_estimation(df, model, 'covs',method, covs = z)
         elif criterion == "none":
-            ace = causal_estimator.run_estimation(df, model, 'covs',method, covs = ['A'])
+            ace = causal_estimator.run_estimation(df, model, 'covs',method, covs = [])
         else:
             ace = causal_estimator.run_estimation(df, model, criterion,method)
 
@@ -114,7 +114,7 @@ def average_multiple_sims(nums, graph, model, criterion, method, n_jobs, n_runs,
         (acc, rmse) = causal_estimator.calculate_accuracy()
 
         adj = causal_estimator.adjustment_set
-        pval = check_adjustment_validity(df, 'Y', adj, 'A', w)
+        pval = check_adjustment_validity(df, 'Y', adj, 'A', w, model)
         validity = 1 if pval > 0.05 else 0
         output = {"acc": acc, "rmse":rmse, "ace":ace,"validity":validity, "pval": pval}
         #output['validity'] = validity
@@ -131,8 +131,13 @@ def average_multiple_sims(nums, graph, model, criterion, method, n_jobs, n_runs,
         print(f"{(method.capitalize() + ' ' + criterion.capitalize()) if (not title) else title} Model: Treatment Accuracy - {round(estimates['acc'],2)}, Variance - {round(variance, 2)}, 95% Confidence Interval: {round(lower, 2)} - {round(upper, 2)}, Average Validity: {round(estimates['validity'], 2)}, Average p-value: {estimates['pval']}")
 
 def test():
+    
     num = 1
-    df, za, zy, z, w = generateDag(1000, 1, 33, "nonlinear")
+    df, za, zy, z, w = generateDag(1000, 3, 33, "nonlinear")
+    print(sum(df['A']))
+    print(df)
+
+    return 0
     #print(np.array(df))
     '''s = time.time() # start time
     samples = []
