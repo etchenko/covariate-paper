@@ -61,7 +61,7 @@ def multiple_sims():
     for (graph, method), values in graphs.items():
         for i, num in enumerate(values[1]):
             results = {}
-            for _ in tqdm(range(num), desc=f"Running Simulations for Graph {graph} {"Linear" if i ==0 else "NN"}"):
+            for _ in tqdm(range(num), desc=f"Running Simulations for Graph {graph} {'Linear' if i ==0 else 'NN'}"):
                 df, za, zy, z, w = generateDag(values[2][i], graph, 66)
                 for criterion in values[0]:
                     causal_estimator = CausalEstimator('A','Y',z)
