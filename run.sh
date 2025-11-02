@@ -10,4 +10,4 @@
 # Command you want to run on the cluster
 # Notice, you must set-up testEval correctly as a conda virtual environment
 # Calling this full path makes sure you are running the correct package versions
-~/.conda/envs/etenv/bin/python3.13 train_net_w_gpus.py
+~/.conda/envs/etenv/bin/python3.13 simulations.py
