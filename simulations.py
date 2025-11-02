@@ -11,19 +11,6 @@ except:
 import time
 #TODO: Test out 100,100,100 structure fpr the outcome neural network? Use 66 variables, and then ask Katie to run on williams machines
 sims = {
-    #"AIPW Treatment Non-linear Graph 1": ["nn","aipw","treatment",1,5000,10],
-    #"AIPW Outcome Non-linear Graph 1": ["nn","aipw","outcome",1,5000,10],
-    #"AIPW Different Non-linear Graph 1": ["nn","aipw","different",1,5000,10],
-    #"AIPW All Non-linear Graph 1": ["nn","aipw","all",1,5000,10],
-    #"DML Treatment Non-linear Graph 2": ["nn","dml","treatment",2,5000,100],
-    #"DML Outcome Non-linear Graph 2": ["nn","dml","outcome",2,5000,100],
-    #"DML All Non-linear Graph 2": ["nn","dml","all",2,5000,100],
-    #"DML Different Non-linear Graph 2": ["nn","dml","different",2,5000,100],
-    #"Backdoor All Non-linear Graph 3": ["nn","backdoor","all",3, 5000, 10],
-    #"Backdoor None Non-linear Graph 3": ["nn","backdoor","none",3, 5000, 10],
-    #"Backdoor Outcome Non-linear Graph 3": ["nn","backdoor","outcome",3, 5000, 5]
-#}
-#'''
     "AIPW Treatment Linear Graph 1": ["linear","aipw","treatment",1,1500,200],
     "AIPW Outcome Linear Graph 1": ["linear","aipw","outcome",1,1500,200],
     "AIPW Different Linear Graph 1": ["linear","aipw","different",1,1500,200],
@@ -35,6 +22,17 @@ sims = {
     "Backdoor All Linear Graph 3": ["linear","backdoor","all",3, 5000, 200],
     "Backdoor None Linear Graph 3": ["linear","backdoor","none",3, 5000, 200],
     "Backdoor Outcome Linear Graph 3": ["linear","backdoor","outcome",3, 5000, 200],
+    "AIPW Treatment Non-linear Graph 1": ["nn","aipw","treatment",1,5000,10],
+    "AIPW Outcome Non-linear Graph 1": ["nn","aipw","outcome",1,5000,10],
+    "AIPW Different Non-linear Graph 1": ["nn","aipw","different",1,5000,10],
+    "AIPW All Non-linear Graph 1": ["nn","aipw","all",1,5000,10],
+    "DML Treatment Non-linear Graph 2": ["nn","dml","treatment",2,5000,100],
+    "DML Outcome Non-linear Graph 2": ["nn","dml","outcome",2,5000,100],
+    "DML All Non-linear Graph 2": ["nn","dml","all",2,5000,100],
+    "DML Different Non-linear Graph 2": ["nn","dml","different",2,5000,100],
+    "Backdoor All Non-linear Graph 3": ["nn","backdoor","all",3, 5000, 10],
+    "Backdoor None Non-linear Graph 3": ["nn","backdoor","none",3, 5000, 10],
+    "Backdoor Outcome Non-linear Graph 3": ["nn","backdoor","outcome",3, 5000, 5]
     
 }
 
