@@ -17,11 +17,6 @@ from boruta import BorutaPy
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import root_mean_squared_error
 
-try:
-    import multiprocess
-except:
-    import multiprocessing as multiprocess
-
 @dataclass
 class ModelBundle:
     treatment_selector_model: object            # Penalized model to select adjustment set based on treatment
@@ -65,30 +60,6 @@ def get_model_bundle(model_type: str) -> ModelBundle:
             treatment_feature_selector = SupportMaskSelector(),
             outcome_feature_selector = SupportMaskSelector()
         )
-        '''bundle = ModelBundle(
-            treatment_selector_model=BorutaPy(
-                    verbose=0,
-                    estimator=RandomForestClassifier(max_depth=5),
-                    n_estimators='auto',
-                    two_step=True,
-                    alpha=0.01,
-                    random_state=42
-                ),
-            treatment_estimator_model=MLPClassifier(hidden_layer_sizes=[100,]),
-            outcome_selector_model=BorutaPy(
-                    verbose=0,
-                    estimator=RandomForestRegressor(max_depth=5),
-                    n_estimators='auto',
-                    two_step=True,
-                    alpha=0.01,
-                    random_state=42,
-                    perc=100
-
-                ),
-            outcome_estimator_model=MLPRegressor(hidden_layer_sizes=[100,]),
-            treatment_feature_selector = SupportMaskSelector(),
-            outcome_feature_selector = SupportMaskSelector()
-        )'''
 
     elif model_type == "rf":
         bundle = ModelBundle(

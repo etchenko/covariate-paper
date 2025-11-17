@@ -151,18 +151,18 @@ def generateDag(nums, graph = 1, zs = None, type: Literal["linear","non-linear"]
             '''
             Generate the graph from Figure 3 (For outcome regression)
             '''
-            au1 = c1u1 = c1u2 = c2u2 = c2u3= yu3 = ya = o1c1 = ao1 =3
+            au1 = c1u1 = c1u2 = c2u2 = c2u3= yu3 = ya = o1c1 = ao1 =1
             c1u2 = -4
-            c2u2 = 3
+            c2u2 = 2
             yu3 = 4
             ya = 1
-            data['U1'] = np.pow(generate_gauss(0,2, nums),2)
+            data['U1'] = generate_gauss(0,1, nums)
             data['U2'] = generate_gauss(0,1, nums)
-            data['U3'] = generate_gauss(0,2, nums)
-            data['U4'] = np.tanh(generate_gauss(0,1, nums))
-            data['C1'] = np.pow(c1u1*data['U1'],2) + np.sqrt(np.abs(c1u2*data['U2'])) + generate_gauss(0,1,nums)
+            data['U3'] = generate_gauss(0,1, nums)
+            data['U4'] = generate_gauss(0,1, nums)
+            data['C1'] = c1u1*np.sin(data['U1']) + c1u2*data['U2'] + generate_gauss(0,1,nums)
             data['O1'] = generate_gauss(0,1,nums)
-            data['A'] = generate_treatment(au1*data['U1'] * ao1*data['O1'])
-            data['C2'] = c2u2*data['U2'] + np.abs(c2u3*data['U3']) + np.sin(generate_gauss(0,1,nums))
-            data['Y'] = ya*data['A'] + yu3*(data['U3'])* generate_gauss(0,1,nums)
+            data['A'] = generate_treatment(au1*data['U1'] + ao1*data['O1'])
+            data['C2'] = c2u2*data['U2'] + np.sin(c2u3*data['U3']) + generate_gauss(0,1,nums)
+            data['Y'] = ya*data['A'] + yu3*np.tanh(data['U3']) + generate_gauss(0,1,nums)
             return data, ['C1','C2'], [], ['C1','C2'], 'O1'

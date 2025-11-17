@@ -4,45 +4,29 @@ import statsmodels.api as sm
 from causallearn.utils.cit import CIT
 from causallearn.search.ConstraintBased.PC import pc
 from sklearn.linear_model import LogisticRegression, LinearRegression
+from gcm import GCM_translation
+from npeet_plus import mi_pvalue
+from sklearn.ensemble import RandomForestRegressor
 
-def check_adjustment_validity(df, Y, Z, A, w, type):
+def check_adjustment_validity(df, Y, Z, A, w, model_type, res_Y = None):
     """
     Return 1 if the adjustment set is valid, and 0 otherwise
     """
-    '''
-    #y_errs = data[Y] - LinearRegression().fit(data, data[Y]).predict(data)
-    fisherz_obj = CIT(np.array(df), "fastkci")
+    return GCM_translation(df[w], df["Y"], df[Z + [A]], res_Y = res_Y, model = model_type)
+
+    test_kwargs = {
+        'approx': True,  # Use the "fast" approximation
+        'n_random_features': 1000  # But make it powerful
+    }
+    kci_obj = CIT(np.array(df), "fastkci",**test_kwargs)
     w = df.columns.get_loc(w)
     y = df.columns.get_loc("Y")
     cond = Z + [A]
     cond = [df.columns.get_loc(c) for c in cond]
-    pValue = fisherz_obj(w, y, cond)
+    pValue = kci_obj(w, y, cond)
     return pValue
-        
-    sm.add_constant(data)
-    sm.OLS(df[Y], data).fit'''
-    if type == "linear":
-        used = Z + [A] + [Y]
-        ws = {}
 
-        data = df[[w] + Z + [A]]
-        data = sm.add_constant(data)
-        results = sm.OLS(df[Y], data).fit()
-        p_value = results.pvalues[1]
-
-        return p_value
-    else:
-        kci_obj = CIT(np.array(df), "fastkci")
-        w = df.columns.get_loc(w)
-        y = df.columns.get_loc("Y")
-        cond = Z + [A]
-        cond = [df.columns.get_loc(c) for c in cond]
-        pValue = kci_obj(w, y, cond)
-        return pValue
-
-
-
-
+    #
 
     def X_effect(X, Y, Z, data):
         
