@@ -10,7 +10,7 @@ Lasso Version Implemented by Xueda Shen. shenxueda@berkeley.edu
 """
 
 
-def GCM_translation(X, Y, Z, alpha = 0.05, nsim = 1000, res_X = None, res_Y = None, model = "linear"):
+def GCM_translation(X, Y, Z, alpha = 0.05, nsim = 1000, res_X = None, res_Y = None, model = "linear", tolerance_threshold = None):
     """
     This is a direct translation from GCM Testing in R. 
     
@@ -19,6 +19,7 @@ def GCM_translation(X, Y, Z, alpha = 0.05, nsim = 1000, res_X = None, res_Y = No
         alpha: Pre-specified level of cutoff.
         nsim: Number of monte-carlo simulations.
         res_X, res_Y: corresponding to resid.XonZ, resid.YonZ respectively in original implementation. 
+        tolerance_threshold: When set, used to compute the inverted test as proposed in Malinsky (2024)
     """
 
     # Checking if providing residual or computing residual
@@ -77,7 +78,10 @@ def GCM_translation(X, Y, Z, alpha = 0.05, nsim = 1000, res_X = None, res_Y = No
 
         norm_con = np.sqrt(np.mean(R_mat ** 2, axis = 1) - np.mean(R_mat, axis = 1)**2)
         norm_con = np.expand_dims(norm_con, axis = 1)
-        R_mat = R_mat / norm_con
+        if tolerance_threshold is  None:
+            R_mat = R_mat / norm_con
+        else:
+            R_mat = (R_mat - tolerance_threshold)/  norm_con
 
         # Test statistics
         test_stat = np.max(np.abs(np.mean(R_mat, axis = 1))) * np.sqrt(nn)
@@ -87,7 +91,8 @@ def GCM_translation(X, Y, Z, alpha = 0.05, nsim = 1000, res_X = None, res_Y = No
 
         # p value
         pval = (np.sum(test_stat_sim >= test_stat) + 1) / (nsim + 1)
-    
+
+
     else:
         if (len(res_X.shape) == 1):  # ifesle(is.null()...)
             nn = res_X.shape[0]
@@ -96,8 +101,15 @@ def GCM_translation(X, Y, Z, alpha = 0.05, nsim = 1000, res_X = None, res_Y = No
         R = np.multiply(res_X, res_Y)
         R_sq = R ** 2
         meanR = np.mean(R)
-        test_stat = np.sqrt(nn) * meanR / np.sqrt(np.mean(R_sq) - meanR ** 2)
-        pval = 2 * (1 - stats.norm.cdf(np.abs(test_stat)))
+        if tolerance_threshold is None:
+            test_stat = np.sqrt(nn) * meanR / np.sqrt(np.mean(R_sq) - meanR ** 2)
+
+
+            pval = 2 * (1 - stats.norm.cdf(np.abs(test_stat)))
+        else:
+            test_stat1 = np.sqrt(nn) * (meanR - tolerance_threshold) / np.sqrt(np.mean(R_sq) - meanR ** 2)
+            test_stat2 = np.sqrt(nn) * (meanR + tolerance_threshold) / np.sqrt(np.mean(R_sq) - meanR ** 2)
+            pval = stats.norm.cdf(test_stat1)
 
 
     return pval

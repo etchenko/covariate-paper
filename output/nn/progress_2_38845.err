@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/shared/elijaht/covariate-paper/simulations.py", line 117, in <module>
+    vars = 66 if not item[6] else item[6]
+                     ~~~~^^^
+IndexError: list index out of range

@@ -131,7 +131,6 @@ def generateDag(nums, graph = 1, zs = None, type: Literal["linear","non-linear"]
                 lambda x: np.sin(x),         # sine
                 lambda x: np.cos(x),         # cosine
                 lambda x: np.log1p(np.abs(x)),# log(1 + |x|)
-                lambda x: np.tanh(x),        # tanh
                 lambda x: np.sign(x) * x**3, # cubic preserving sign
             ]
             ay = 0.5
@@ -159,10 +158,9 @@ def generateDag(nums, graph = 1, zs = None, type: Literal["linear","non-linear"]
             data['U1'] = generate_gauss(0,1, nums)
             data['U2'] = generate_gauss(0,1, nums)
             data['U3'] = generate_gauss(0,1, nums)
-            data['U4'] = generate_gauss(0,1, nums)
             data['C1'] = c1u1*np.sin(data['U1']) + c1u2*data['U2'] + generate_gauss(0,1,nums)
             data['O1'] = generate_gauss(0,1,nums)
             data['A'] = generate_treatment(au1*data['U1'] + ao1*data['O1'])
-            data['C2'] = c2u2*data['U2'] + np.sin(c2u3*data['U3']) + generate_gauss(0,1,nums)
-            data['Y'] = ya*data['A'] + yu3*np.tanh(data['U3']) + generate_gauss(0,1,nums)
+            data['C2'] = c2u2*data['U2'] + np.pow(c2u3*data['U3'], 2) + generate_gauss(0,1,nums)
+            data['Y'] = ya*data['A'] + yu3*np.pow(data['U3'], 2) + generate_gauss(0,1,nums)
             return data, ['C1','C2'], [], ['C1','C2'], 'O1'

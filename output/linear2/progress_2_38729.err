@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "/shared/elijaht/covariate-paper/simulations.py", line 112, in <module>
+    average_multiple_sims(
+    ~~~~~~~~~~~~~~~~~~~~~^
+        item[4], item[3], item[0], item[2], item[1],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        title=key
+        ^^^^^^^^^
+    )
+    ^
+TypeError: average_multiple_sims() missing 1 required positional argument: 'vars'

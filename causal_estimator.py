@@ -50,16 +50,37 @@ def get_model_bundle(model_type: str) -> ModelBundle:
                     estimator=RandomForestClassifier( n_jobs=-1),
                     random_state=42,
                 ),
-            treatment_estimator_model=MLPClassifier(hidden_layer_sizes=[100, 100, 100],learning_rate='adaptive',early_stopping=True,),
+            treatment_estimator_model=MLPClassifier(
+                hidden_layer_sizes=[64],
+                solver='adam', 
+                early_stopping=True,
+                learning_rate_init=1e-3,
+                batch_size=512,
+                max_iter=200,
+                tol=1e-4,
+                validation_fraction=0.1,
+                n_iter_no_change=10,
+                ),
             outcome_selector_model=BorutaPy(
                     verbose=0,
                     estimator=RandomForestRegressor(n_jobs=-1),
                     random_state=42,
                 ),
-            outcome_estimator_model=MLPRegressor(hidden_layer_sizes=[100, 100, 100],learning_rate='adaptive',early_stopping=True,),
+            outcome_estimator_model=MLPRegressor(
+                hidden_layer_sizes=[64],
+                solver='adam', 
+                early_stopping=True,
+                learning_rate_init=1e-3,
+                batch_size=512,
+                max_iter=200,
+                tol=1e-4,
+                validation_fraction=0.1,
+                n_iter_no_change=10,
+                ),
             treatment_feature_selector = SupportMaskSelector(),
             outcome_feature_selector = SupportMaskSelector()
         )
+
 
     elif model_type == "rf":
         bundle = ModelBundle(

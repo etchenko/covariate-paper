@@ -8,12 +8,11 @@ from gcm import GCM_translation
 from npeet_plus import mi_pvalue
 from sklearn.ensemble import RandomForestRegressor
 
-def check_adjustment_validity(df, Y, Z, A, w, model_type, res_Y = None):
+def check_adjustment_validity(df, Y, Z, A, w, model_type, res_Y = None, tolerance_threshold = None):
     """
     Return 1 if the adjustment set is valid, and 0 otherwise
     """
-    return GCM_translation(df[w], df["Y"], df[Z + [A]], res_Y = res_Y, model = model_type)
-
+    return GCM_translation(df[w], df["Y"], df[Z + [A]], res_Y = res_Y, model = model_type, tolerance_threshold = tolerance_threshold)
     test_kwargs = {
         'approx': True,  # Use the "fast" approximation
         'n_random_features': 1000  # But make it powerful
